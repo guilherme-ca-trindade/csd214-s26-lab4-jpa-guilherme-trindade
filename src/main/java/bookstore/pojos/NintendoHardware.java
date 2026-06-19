@@ -1,5 +1,7 @@
 package bookstore.pojos;
 
+import bookstore.entities.NintendoHardwareEntity;
+
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -78,6 +80,34 @@ public class NintendoHardware extends NintendoProduct {
 
     public void setColor(String color) {
         this.color = color;
+    }
+
+    // --- DTO <-> Entity mapping ---
+    public NintendoHardwareEntity toEntity() {
+        NintendoHardwareEntity entity = new NintendoHardwareEntity();
+        entity.setId(this.getDbId());             // Inherited from Product DTO
+        entity.setProductId(this.getProductId()); // Inherited from Product DTO
+        entity.setPlatform(this.getPlatform());   // Inherited from NintendoProduct DTO
+        entity.setName(this.name);
+        entity.setPrice(this.price);
+        entity.setCopies(this.copies);
+        entity.setHardwareType(this.hardwareType);
+        entity.setColor(this.color);
+        return entity;
+    }
+
+    public static NintendoHardware fromEntity(NintendoHardwareEntity entity) {
+        NintendoHardware hardware = new NintendoHardware(
+                entity.getName(),
+                entity.getPrice(),
+                entity.getCopies(),
+                entity.getPlatform(),
+                entity.getHardwareType(),
+                entity.getColor()
+        );
+        hardware.setDbId(entity.getId());
+        hardware.setProductId(entity.getProductId());
+        return hardware;
     }
 
     @Override

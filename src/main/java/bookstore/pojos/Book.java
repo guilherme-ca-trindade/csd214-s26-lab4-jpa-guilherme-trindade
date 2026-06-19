@@ -1,5 +1,7 @@
 package bookstore.pojos;
 
+import bookstore.entities.BookEntity;
+
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -50,6 +52,25 @@ public class Book extends Publication {
 
     public void setAuthor(String author) {
         this.author = author;
+    }
+
+    // --- DTO <-> Entity mapping ---
+    public BookEntity toEntity() {
+        BookEntity entity = new BookEntity();
+        entity.setId(this.getDbId());            // Inherited DB primary key
+        entity.setProductId(this.getProductId()); // Inherited String UUID
+        entity.setTitle(this.getTitle());
+        entity.setPrice(this.getPrice());
+        entity.setCopies(this.getCopies());
+        entity.setAuthor(this.author);
+        return entity;
+    }
+
+    public static Book fromEntity(BookEntity entity) {
+        Book book = new Book(entity.getAuthor(), entity.getTitle(), entity.getPrice(), entity.getCopies());
+        book.setDbId(entity.getId());
+        book.setProductId(entity.getProductId());
+        return book;
     }
 
     @Override

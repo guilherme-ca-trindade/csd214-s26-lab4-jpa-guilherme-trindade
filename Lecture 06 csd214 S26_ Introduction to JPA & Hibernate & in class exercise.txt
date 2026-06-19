@@ -1,0 +1,1123 @@
+﻿Lecture 06 csd214 S26: Introduction to JPA & Hibernate & in class exercise
+Course: CSD214 - Programming Concepts II
+Semester: Summer 2026
+Reference Project: csd214-s26-lecture6-jpa
+Primary Course Outcomes:
+
+
+* Outcome 4: Integrate a database with an application using an Object-Relational Mapper (ORM).
+* Outcome 1.5: Create modular software applications using the DTO pattern.
+
+
+________________
+
+
+0. Project Initialization (Student Action Required)
+Before beginning the theory, you must initialize your workspace using the S26 Lecture 6 template.
+
+
+1. Navigate to the Template: Open https://github.com/fcarella/csd214-s26-lecture6-jpa.
+2. Generate Your Repo: Click the green "Use this template" button and select "Create a new repository."
+3. Naming Convention: You must name your repository exactly as:
+csd214-s26-lecture6-jpa-firstname-lastname
+4. Clone: Open IntelliJ Ultimate, select Get from VCS, and paste your repository URL.
+5. Infrastructure: Open docker-compose.yml and start the MySQL container on Port 3333 (Compose Up).
+
+
+________________
+
+
+1. Introduction: What is JPA and ORM?
+The Mismatch (The Impedance Mismatch)
+In Lecture 5, you discovered the friction between Object-Oriented Java and Relational Databases:
+
+
+   * Java uses Inheritance (e.g., Book extends Publication).
+   * SQL uses Flat Tables (Rows and Columns).
+   * Java uses Associations (Objects pointing to other Objects).
+   * SQL uses Foreign Keys and Joins.
+
+
+An ORM (Object-Relational Mapper) is a library that automates the translation between these two paradigms.
+JPA vs. Hibernate
+   * JPA (Jakarta Persistence API): This is the Specification. It is a set of interfaces and rules defined by the Jakarta community (the "Java Rulebook"). It includes annotations like @Entity, @Id, and @Column.
+   * Hibernate: This is the Implementation. It is the actual, under-the-hood engine that reads your JPA annotations, generates the SQL commands, and handles network traffic to MySQL.
+What is an Entity?
+An Entity is a lightweight Java class whose state is intended to be persisted in a relational database table [4]. It is a "Java representation of a database row" [4]. Unlike standard POJOs, an Entity is explicitly decorated with metadata annotations (such as @Entity) to describe its relationship to the database schema.
+
+
+________________
+
+
+1.1 Deep Dive: JPA Entities
+
+
+Great Resource:  Java Persistence - Wikibooks, open books for an open world 
+	
+To understand why enterprise systems depend on JPA, we must analyze the structural requirements of an Entity, the architectural problems it aims to solve, and the practical trade-offs it introduces to software development.
+A. Anatomy of a JPA Entity
+At its simplest, an Entity is a Java class decorated with metadata. However, the JPA specification enforces strict requirements to ensure that Hibernate can manage the lifecycle of these objects:
+
+
+   1. @Entity Annotation: Tells the persistence provider (Hibernate) that this class represents a table.
+   2. No-Argument Constructor: Must have a public or protected zero-argument constructor [5]. Hibernate uses Java Reflection to instantiate the entity before hydrating its fields. If omitted, the application will fail on startup.
+   3. @Id Annotation: Every entity must have a designated primary key. This is used by JPA to uniquely identify the row in the persistence context.
+   4. Non-Final Class & Fields: The entity class and its persistent fields must not be declared final. Hibernate subclass-proxies entities to support features like Lazy Loading (loading children only when accessed); final keywords prevent this subclassing.
+
+
+________________
+
+
+B. The "Why": Solving the Impedance Mismatch
+Historically, developers wrote raw SQL strings directly inside Java files. This created a friction point known as the Object-Relational Impedance Mismatch.
+
+
+Java objects are structured as graphs with inheritance, polymorphic relationships, and dynamic behaviors. Relational databases are structured as flat, rigid grids of keys, rows, and constraints. JPA entities act as the declarative bridge, allowing developers to define how these two conflicting paradigms should align without writing manual translator scripts for every table.
+
+
+________________
+
+
+C. The Pros (Advantages of JPA Entities)
+   1. Elimination of Boilerplate DTO/JDBC Code:
+In raw JDBC, inserting a nested object hierarchy requires writing multiple SQL statements, managing transactional savepoints, and mapping auto-incremented keys manually. JPA automates this entire process. A single call to em.persist(entity) generates the required SQL under the hood.
+   2. Database Portability (Dialect Abstraction):
+JPA entities are database-agnostic. The SQL dialect is configured in persistence.xml rather than hardcoded in the application. If an organization migrates its database from MySQL to PostgreSQL, developers only need to change the hibernate.dialect property. Hibernate will automatically translate the entity queries into PostgreSQL-compliant SQL syntax.
+   3. Automated Lifecycle Tracking (Dirty Checking):
+Inside a transaction, JPA places entities in a Managed state. Hibernate takes a snapshot of the object's fields. When the transaction commits, Hibernate compares the current state of the object against the snapshot. Any modifications automatically trigger the appropriate UPDATE statements without requiring the developer to call an explicit "update" method.
+   4. Caching and Performance Optimizations (First-Level Cache):
+The EntityManager maintains a First-Level Cache (Persistence Context) within a single transaction. If your application queries the same book entity three times in a single request, JPA hits the database once, stores the result in memory, and returns the cached object for subsequent requests. This reduces redundant network overhead.
+
+
+________________
+
+
+D. The Cons (Disadvantages & Trade-offs of JPA Entities)
+      1. Steep Learning Curve and "Hidden" Complexity:
+While basic CRUD operations are straightforward, mapping complex relationships (@OneToMany, @ManyToMany) requires a deep understanding of JPA mechanics. Mistuning fetch strategies can lead to performance catastrophes, most notably the N+1 Query Problem (where a query designed to fetch 100 records mistakenly executes 101 separate database hits).
+      2. Memory and CPU Overhead:
+Because Hibernate must perform snapshotting, dirty-checking, reflection-based instantiation, and maintain the First-Level Cache, JPA consumes substantially more JVM heap memory and CPU cycles than raw JDBC or lightweight row mappers (like Spring's JdbcTemplate).
+      3. Loss of Precise SQL Control:
+Since Hibernate generates the SQL statements automatically, developers lose granular control over the query structure. For highly complex queries involving complex analytic functions, CTEs (Common Table Expressions), or database-specific optimizations, the generated JPQL can be highly inefficient compared to a hand-tuned native SQL query.
+      4. "Magic" is Hard to Debug:
+When a database transaction fails due to constraint violations or synchronization issues, debugging can be difficult. Developers must look past the Java stack trace, enable SQL logging (hibernate.show_sql=true), and analyze the raw SQL output to determine what the ORM engine did incorrectly.
+
+
+________________
+
+
+E. Architectural Summary: When to Use Entities
+Architectural Requirement
+	Use JPA Entities
+	Use Raw SQL / JDBC
+	Complex Domain Models (DDD)
+	Yes — Simplifies deep object graphs.
+	No — Requires immense translation code.
+	High-Throughput Batch Processing
+	No — Too much overhead from dirty-checking.
+	Yes — Allows raw speed and bulk inserts.
+	Simple CRUD Operations
+	Yes — Quick to build and secure by default.
+	No — Leads to bloated, repetitive code.
+	Database-Specific Optimization
+	No — Abstraction hides specific engine features.
+	Yes — Direct access to dialect features.
+	
+
+________________
+
+
+2. Dependencies (pom.xml)
+To utilize JPA and Hibernate, we include the following dependencies in the pom.xml:
+
+
+<!-- MySQL Driver: The translation dictionary for MySQL protocol -->
+<dependency>
+   <groupId>com.mysql</groupId>
+   <artifactId>mysql-connector-j</artifactId>
+   <version>8.2.0</version>
+</dependency>
+
+
+<!-- Hibernate Core: The engine that parses annotations and generates SQL -->
+<dependency>
+   <groupId>org.hibernate.orm</groupId>
+   <artifactId>hibernate-core</artifactId>
+   <version>6.6.1.Final</version>
+</dependency> 
+	
+
+________________
+
+
+3. Configuration: persistence.xml
+The persistence.xml file is the heart of a JPA application [5]. It configures how Hibernate connects to the database.
+
+
+File Location: src/main/resources/META-INF/persistence.xml
+
+
+
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+
+
+    <persistence-unit name="bookstore-pu">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+
+        <properties>
+            <!-- Database Connection (Matches Docker Port 3333) -->
+            <property name="jakarta.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver" />
+            <property name="jakarta.persistence.jdbc.url"    value="jdbc:mysql://localhost:3333/bookstore" />
+            <property name="jakarta.persistence.jdbc.user"   value="csd214" />
+            <property name="jakarta.persistence.jdbc.password" value="itstudies12345" />
+
+
+            <!-- Hibernate Settings -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect" />
+            <property name="hibernate.show_sql" value="true" />
+            
+            <!-- Database Schema Strategy -->
+            <property name="hibernate.hbm2ddl.auto" value="create" />
+        </properties>
+    </persistence-unit>
+</persistence> 
+	
+
+Analyzing hibernate.hbm2ddl.auto options:
+         * create: Drops existing tables and creates fresh ones on application startup [5]. (Best for development and testing) [5].
+         * update: Keeps existing data and safely alters columns/tables if you change your Java Entity structure [5].
+         * none: Prevents Hibernate from making schema changes. (The standard for Production environments).
+
+
+________________
+
+
+4. Simple Standalone JPA: JpaBookApp.java
+Open src/main/java/bookstore/jpa/JpaBookApp.java. This script is a standalone demonstration of the complete JPA transaction lifecycle.
+
+
+package bookstore.jpa;
+
+
+import bookstore.entities.BookEntity;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
+import java.util.List;
+
+
+public class JpaBookApp {
+    public static void main(String[] args) {
+        // 1. Start Hibernate (Loads persistence.xml configuration)
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("bookstore-pu");
+        EntityManager em = emf.createEntityManager(); // Opens a session to the DB
+        
+        try {
+            // 2. Create Data inside a Transaction
+            em.getTransaction().begin();
+            
+            BookEntity book = new BookEntity();
+            book.setPrice(34.99);
+            book.setCopies(10);
+            book.setAuthor("Maria Batista");
+            
+            em.persist(book); // Hibernate generates the INSERT SQL statement automatically
+            em.getTransaction().commit(); // Permanently saves changes to MySQL
+            System.out.println("Book persisted with ID: " + book.getId());
+
+
+            // 3. Read Data (Polymorphic Query)
+            // We run JPQL (Java Persistence Query Language) - Querying the Class, not the table
+            List<BookEntity> books = em.createQuery(
+                    "SELECT b FROM BookEntity b", BookEntity.class).getResultList();
+
+
+            for (BookEntity b : books) {
+                System.out.println("Found persistent entity: " + b);
+            }
+        } finally {
+            // 4. Safely Close database connections
+            em.close();
+            emf.close();
+        }
+    }
+} 
+
+
+	
+
+________________
+
+
+5. Architectural Critique: Why Not Extend Editable in Entities?
+In Labs 1 and 2, our data classes extended Editable to directly handle CLI Scanner input. Why can't we just annotate those classes as @Entity and save time?
+
+
+This is a critical architectural decision based on three clean-code principles:
+
+
+         1. Single Responsibility Principle (SRP):
+An Entity has one job: representing database state [6]. Editable has one job: talking to a human via the command line [6]. If we merge them, our persistence code becomes tightly coupled to a CLI [6]. If we migrate to a Web Server later, the Scanner code inside our entities will cause the application to crash [6].
+         2. The DTO (Data Transfer Object) Pattern:
+POJOs (like Book.java and Tire.java) act as DTOs [6]. They are temporary containers that collect and validate user keyboard inputs [6]. Once data is clean, we map (copy) it into the Entity (the "Vault") for database storage [6].
+         3. The "Long Transaction" Problem:
+Database connections are scarce. JPA transactions should be extremely short: Open → Write → Close [6]. If we put Scanner prompts inside an Entity transaction, the database connection stays locked while the user is typing [6]. If the user goes on break, the connection is wasted [6].
+
+
+________________
+
+
+6. In-Class Exercise: Integrating Vehicle Parts into JPA
+We will now convert the Automotive department POJOs (VehiclePart, Tire, Battery) from Lab 1/2 into Hibernate Entities.
+Step 1: Check Database Single Table Inheritance
+Look at ProductEntity.java. Notice that it is configured to use the SINGLE_TABLE inheritance strategy:
+
+
+
+
+@Entity
+@Table(name = "product_entity")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+public class ProductEntity { ... } 
+	
+This means our new Automotive entities will sit in the same table as Books, Magazines, and Tickets!
+Step 2: Create the Entities
+Create VehiclePartEntity.java, TireEntity.java, and BatteryEntity.java in the bookstore.entities package.
+We are going to use JPA Buddy, a powerful IntelliJ plugin, to speed up our work.
+Step 1: Install JPA Buddy
+            1. Go to Settings -> Plugins.
+            2. Search for "JPA Buddy" and install/restart.
+Step 2: Create Entities from POJOs
+Instead of typing every field, we will convert our Lab 1 POJOs into Entities.
+
+
+            1. Right-click the entities package -> New -> JPA Entity.
+            2. Name it VehiclePartEntity.
+  
+
+uncheck productId, price and dbId since these are handled in the ProductEntity
+
+make sure you put it in the right package
+
+  
+
+Repeat for TireEntity and BatteryEntity  (extending VehiclePartEntity).
+
+
+
+NOTE ** you must create constructors, equals, hashCode and toString because jpaBuddy doesn't do it.
+
+
+
+Here it is done for you if you need it
+package bookstore.entities;
+
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+
+
+import java.util.Objects;
+
+
+@Entity
+public class VehiclePartEntity extends ProductEntity {
+   @Column(name = "manufacturer")
+   private String manufacturer;
+
+
+   @Column(name = "price", nullable = false)
+   private double price;
+
+
+   public String getManufacturer() {
+       return manufacturer;
+   }
+
+
+   public void setManufacturer(String manufacturer) {
+       this.manufacturer = manufacturer;
+   }
+
+
+   public double getPrice() {
+       return price;
+   }
+
+
+   public void setPrice(double price) {
+       this.price = price;
+   }
+
+
+   public VehiclePartEntity() {
+   }
+
+
+   public VehiclePartEntity(String manufacturer, double price) {
+       this.manufacturer = manufacturer;
+       this.price = price;
+   }
+
+
+   @Override
+   public boolean equals(Object o) {
+       if (o == null || getClass() != o.getClass()) return false;
+       VehiclePartEntity that = (VehiclePartEntity) o;
+       return Double.compare(price, that.price) == 0 && Objects.equals(manufacturer, that.manufacturer);
+   }
+
+
+   @Override
+   public int hashCode() {
+       return Objects.hash(manufacturer, price);
+   }
+
+
+   @Override
+   public String toString() {
+       return "VehiclePartEntity{" +
+               "manufacturer='" + manufacturer + '\'' +
+               ", price=" + price +
+               "} " + super.toString();
+   }
+}
+
+
+	package bookstore.entities;
+
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+
+
+import java.util.Objects;
+
+
+@Entity
+public class TireEntity extends VehiclePartEntity {
+   @Column(name = "diameter", nullable = true)
+   private int diameter;
+
+
+   public int getDiameter() {
+       return diameter;
+   }
+
+
+   public void setDiameter(int diameter) {
+       this.diameter = diameter;
+   }
+
+
+   public TireEntity() {
+   }
+
+
+   public TireEntity(String manufacturer, double price, int diameter) {
+       super(manufacturer,  price);
+       this.diameter = diameter;
+   }
+
+
+   @Override
+   public boolean equals(Object o) {
+       if (o == null || getClass() != o.getClass()) return false;
+       if (!super.equals(o)) return false;
+       TireEntity that = (TireEntity) o;
+       return diameter == that.diameter;
+   }
+
+
+   @Override
+   public int hashCode() {
+       return Objects.hash(super.hashCode(), diameter);
+   }
+
+
+   @Override
+   public String toString() {
+       return "TireEntity{" +
+               "diameter=" + diameter +
+               "} " + super.toString();
+   }
+}
+
+
+
+
+	package bookstore.entities;
+
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+
+
+import java.util.Objects;
+
+
+@Entity
+public class BatteryEntity extends VehiclePartEntity {
+   @Column(name = "cold_cranking_amps", nullable = true)
+   private int coldCrankingAmps;
+
+
+   public int getColdCrankingAmps() {
+       return coldCrankingAmps;
+   }
+
+
+   public void setColdCrankingAmps(int coldCrankingAmps) {
+       this.coldCrankingAmps = coldCrankingAmps;
+   }
+
+
+   public BatteryEntity() {
+   }
+
+
+   public BatteryEntity(String manufacturer, double price, int coldCrankingAmps) {
+       super(manufacturer, price);
+       this.coldCrankingAmps = coldCrankingAmps;
+   }
+
+
+   @Override
+   public boolean equals(Object o) {
+       if (o == null || getClass() != o.getClass()) return false;
+       if (!super.equals(o)) return false;
+       BatteryEntity that = (BatteryEntity) o;
+       return coldCrankingAmps == that.coldCrankingAmps;
+   }
+
+
+   @Override
+   public int hashCode() {
+       return Objects.hash(super.hashCode(), coldCrankingAmps);
+   }
+
+
+   @Override
+   public String toString() {
+       return "BatteryEntity{" +
+               "coldCrankingAmps=" + coldCrankingAmps +
+               "} " + super.toString();
+   }
+}
+
+
+
+
+
+
+
+
+	Step 3: Implement Mapping Methods in DTO POJOs
+Add mapping methods inside Tire.java to support clean DTO-Entity translations:
+
+
+
+
+// Add to src/main/java/bookstore/pojos/Tire.java
+public TireEntity toEntity() {
+    TireEntity entity = new TireEntity();
+    entity.setId(this.getDbId()); // Map base long ID
+    entity.setProductId(this.getProductId()); // Map base String UUID
+    entity.setManufacturer(this.getManufacturer());
+    entity.setPrice(this.getPrice());
+    entity.setDiameter(this.getDiameter());
+    return entity;
+}
+
+
+public static Tire fromEntity(TireEntity entity) {
+    Tire tire = new Tire(
+            entity.getManufacturer(),
+            entity.getPrice(),
+            entity.getDiameter()
+    );
+    tire.setDbId(entity.getId());
+    tire.setProductId(entity.getProductId());
+    return tire;
+} 
+	
+
+________________
+
+
+7. Standalone CRUD Lifecycle: JpaAutomotiveApp.java
+Create a new standalone class src/main/java/bookstore/jpa/JpaAutomotiveApp.java to test your automated database CRUD lifecycle:
+
+
+
+
+package bookstore.jpa;
+
+
+import bookstore.entities.TireEntity;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
+import java.util.List;
+
+
+public class JpaAutomotiveApp {
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("bookstore-pu");
+        EntityManager em = emf.createEntityManager();
+
+
+        try {
+            // --- CREATE ---
+            System.out.println("\n[Step 1] Persisting a new Tire...");
+            em.getTransaction().begin();
+            TireEntity myTire = new TireEntity("Michelin", 249.99, 18);
+            em.persist(myTire); // Hibernate generates INSERT
+            em.getTransaction().commit();
+            System.out.println("Tire saved with Database Primary Key ID: " + myTire.getId());
+
+
+            // --- READ ---
+            listTires(em, "[Step 2] Database Tires:");
+
+
+            // --- UPDATE (Dirty Checking / Managed Entities) ---
+            System.out.println("\n[Step 3] Editing Tire Price (Dirty Checking)...");
+            em.getTransaction().begin();
+            TireEntity managedTire = em.find(TireEntity.class, myTire.getId());
+            if (managedTire != null) {
+                managedTire.setPrice(199.99); // Changing Java field updates DB on commit
+            }
+            em.getTransaction().commit();
+            listTires(em, "[Step 4] After Price Update:");
+
+
+            // --- DELETE ---
+            System.out.println("\n[Step 5] Deleting the Tire...");
+            em.getTransaction().begin();
+            TireEntity target = em.find(TireEntity.class, myTire.getId());
+            if (target != null) {
+                em.remove(target); // Hibernate generates DELETE
+            }
+            em.getTransaction().commit();
+            listTires(em, "[Step 6] After Deletion:");
+
+
+        } finally {
+            em.close();
+            emf.close();
+        }
+    }
+
+
+    private static void listTires(EntityManager em, String header) {
+        System.out.println("\n" + header);
+        List<TireEntity> tires = em.createQuery("SELECT t FROM TireEntity t", TireEntity.class).getResultList();
+        if (tires.isEmpty()) {
+            System.out.println("No tires found.");
+        } else {
+            tires.forEach(t -> System.out.println(" > " + t.getManufacturer() + " ($" + t.getPrice() + ")"));
+        }
+    }
+} 
+	
+
+
+
+________________
+
+
+7.1 Architectural Evolution: Introducing JPA Persistence, the  DTO pattern  & Separation of Concerns (SRP)
+Up to this point, our bookstore application managed its runtime state inside a volatile, in-memory ArrayList<SaleableItem> located within App.java. While this collection-based approach served as a straightforward way to learn object-oriented design, it possessed a critical limitation: all inventory and transaction data vanished the moment the Java Virtual Machine (JVM) was shut down.
+
+
+To resolve this limitation and provide true data persistence, we are transitioning our data management engine to the database. We will replace the volatile ArrayList in our core controller (App.java) with a persistent JPA EntityManager [5].
+
+
+However, moving to a database-backed persistence model raises an important architectural question: Where should our user interaction logic reside?
+
+
+In earlier labs, our business classes extended Editable to directly handle console scanning and terminal inputs. If we simply decorate those same classes with JPA annotations (such as @Entity) to save them to database tables, we create a severe architectural conflict. Database model classes (Entities) should remain clean, lightweight representations of our database schema, completely isolated from user-interface technologies [4, 6].
+
+
+To solve this problem without violating the Single Responsibility Principle (SRP), we are introducing the Data Transfer Object (DTO) design pattern [6]. This allows us to separate our user-interface presentation layer from our persistent database schemas, establishing a clean boundaries-and-layers design that makes our system simpler to test, scale, and maintain.
+
+
+What is a DTO (Data Transfer Object)?
+A Data Transfer Object (DTO) is an object designed to carry data between software processes or architectural layers without containing any business or persistence logic.
+
+
+In our refactored bookstore application, our original POJOs (Book, Ticket, Tire, Battery) have been repurposed to act as DTOs. They exist solely to capture input from the user console via the Editable interface and carry that structured data across the boundary to the persistence layer.
+Why Do We Use Them? (The SRP Justification)
+The Single Responsibility Principle (SRP) dictates that a class should have only one reason to change.
+
+
+In a basic, non-DTO architecture, you might be tempted to annotate your Product classes directly as database @Entity classes while keeping the Editable console scanning logic. Doing so introduces several severe architectural flaws:
+
+
+               1. Tight Coupling to Presentation: If an Entity is directly responsible for database mappings and command-line prompts (Scanner), your database layer is locked into a console application. If the bookstore decides to build a web interface using HTML forms later, you cannot reuse your entities without bringing along dead Scanner code.
+               2. Leaking Database Auto-Generated Keys: Database primary keys (@Id Long id) are an internal implementation detail of your database schema. They should not be exposed to the user interface. DTOs isolate these database-specific columns from the presentation layer.
+               3. Protecting Database Model Integrity: Users should never have direct, unvalidated write access to database entities. DTOs act as a buffer. The user manipulates the DTO, the application validates the properties, and only then is the validated data mapped into the Entity class and persisted.
+
+
+________________
+
+
+7.2 Architectural Overview of the App Refactoring
+To support this decoupled architecture, the data flow of our application has changed fundamentally. Instead of holding temporary references inside an in-memory ArrayList<SaleableItem>, our controller (App.java) coordinates database state changes by mapping DTOs to Entities inside active JPA transactions.
+The Lifecycle of a Write Operation (Create)
+[User Input] ──> [DTO POJO (e.g., Book)] ──> [toEntity()] ──> [BookEntity] ──> [JPA EntityManager] ──> [MySQL Disk] 
+
+
+               1. The user selects "Add Book."
+               2. An empty DTO (Book POJO) is instantiated.
+               3. The DTO calls initialize(Scanner) to capture keyboard inputs.
+               4. The validated DTO calls .toEntity(), producing a BookEntity.
+               5. App.java opens a database transaction and persists the BookEntity via the EntityManager.
+The Lifecycle of a Read Operation (List)
+
+[MySQL Disk] ──> [JPA EntityManager] ──> [BookEntity] ──> [fromEntity()] ──> [Book DTO] ──> [Console Output] 
+
+
+               1. The user selects "List Books."
+               2. App.java queries the database for all persistent entities using JPQL: SELECT b FROM BookEntity b.
+               3. The EntityManager returns a list of managed BookEntity objects.
+               4. App.java translates these database rows back into safe, presentation-ready DTOs using Book.fromEntity().
+               5. The DTO's toString() method is output to the user's console screen.
+
+
+________________
+
+
+7.3 Code Modifications in Main.java and App.java
+
+NOTE ** the code is already updated, just verify the code
+	A. Database Resource Management in Main.java
+Because database connections are expensive system resources, Main.java must ensure that connections are cleanly torn down when the program halts.
+
+
+package bookstore;
+
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Bookstore Application Started");
+        App app = new App();
+        try {
+            app.run();
+        } finally {
+            // Guarantees database resources are closed even on failure
+            app.shutdown();
+        }
+    }
+} 
+	
+
+B. JPA Transaction Orchestration in App.java
+The App controller class has been fully refactored. It holds the EntityManagerFactory and EntityManager fields, replacing the temporary in-memory list. Notice how the database transaction blocks are carefully managed using try-catch blocks to support safe rollbacks:
+
+
+public void shutdown() {
+    if (em != null && em.isOpen()) em.close();
+    if (emf != null && emf.isOpen()) emf.close();
+    System.out.println("Database connections closed safely.");
+} 
+	
+
+
+
+________________
+
+
+NOTE ** add this code
+	C. Menu System Integration in App.java
+1. Update the Add Menu (addItem())
+Add option 6 to both the console print statements and the switch block:
+public void addItem() {
+    int choice = 0;
+    while (choice != 99) {
+        System.out.println("\nAdd an item\n");
+        System.out.println("1. Add Book");
+        System.out.println("2. Add Magazine");
+        System.out.println("3. Add DiscMag");
+        System.out.println("4. Add Ticket");
+        System.out.println("5. Add Tire"); // <--- ADD THIS LINE
+        System.out.println("6. Add Battery"); // <--- ADD THIS LINE
+        System.out.println("99. Exit");
+
+
+        try {
+            String line = input.nextLine();
+            if (line.trim().isEmpty()) continue;
+            choice = Integer.parseInt(line.trim());
+        } catch (NumberFormatException e) {
+            choice = 0;
+        }
+
+
+        if (choice == 99) return;
+
+
+        Editable item = null;
+        switch(choice) {
+            case 1: item = new Book(); break;
+            case 2: item = new Magazine(); break;
+            case 3: item = new DiscMag(); break;
+            case 4: item = new Ticket(); break;
+            case 5: item = new Tire(); break; // <--- ADD THIS LINE
+            case 6: item = new Battery(); break; // <--- ADD THIS LINE
+            default: System.out.println("Invalid selection."); continue;
+        }
+
+
+        item.initialize(this.input);
+        saveToDb(item);
+    }
+}
+	
+
+
+
+________________
+
+
+2. Update the List Menu (listAny())
+Add option 7 so users can filter the database specifically for persistent BatteryEntity rows:
+
+public void listAny() {
+    int choice = 0;
+    while (choice != 99) {
+        System.out.println("\nAll Items");
+        System.out.println("-----------");
+        System.out.println("List Options");
+        System.out.println("1. All Products");
+        System.out.println("2. Books Only");
+        System.out.println("3. Magazines Only");
+        System.out.println("4. DiscMags Only");
+        System.out.println("5. Tickets Only");
+        System.out.println("6. Tires Only"); // <--- ADD THIS LINE
+        System.out.println("7. Batteries Only"); // <--- ADD THIS LINE
+        System.out.println("99. Exit");
+
+
+        try {
+            String line = input.nextLine();
+            if (line.trim().isEmpty()) continue;
+            choice = Integer.parseInt(line.trim());
+        } catch (NumberFormatException e) {
+            choice = 0;
+        }
+
+
+        if (choice == 99) return;
+
+
+        Class<? extends ProductEntity> filterClass = null;
+        switch(choice) {
+            case 1: filterClass = ProductEntity.class; break;
+            case 2: filterClass = BookEntity.class; break;
+            case 3: filterClass = MagazineEntity.class; break;
+            case 4: filterClass = DiscMagEntity.class; break;
+            case 5: filterClass = TicketEntity.class; break;
+            case 6: filterClass = TireEntity.class; break; // <--- ADD THIS LINE
+            case 7: filterClass = BatteryEntity.class; break; // <--- ADD THIS LINE
+            default: System.out.println("Invalid selection."); continue;
+        }
+
+
+        String jpql = "SELECT p FROM ProductEntity p";
+        if (filterClass != ProductEntity.class) {
+            jpql = "SELECT p FROM " + filterClass.getSimpleName() + " p";
+        }
+
+
+        List<? extends ProductEntity> dbEntities = em.createQuery(jpql, filterClass).getResultList();
+        for (ProductEntity entity : dbEntities) {
+            if (filterClass == MagazineEntity.class && entity instanceof DiscMagEntity) {
+                continue;
+            }
+            printEntityAsDto(entity);
+        }
+    }
+} 
+	
+
+
+
+3. Update the populate (populate())
+public void populate() {
+        // Safe check: Only seed the database if it is currently empty
+        long count = em.createQuery("SELECT COUNT(p) FROM ProductEntity p", Long.class).getSingleResult();
+        if (count > 0) {
+            System.out.println("Database already seeded. Safe boot complete.");
+            return;
+        }
+
+
+        System.out.println("Seeding database via JPA Hibernate mapping (including Automotive Niche)...");
+        Faker faker = new Faker();
+        em.getTransaction().begin();
+
+
+        try {
+            for (int i = 0; i < 2; i++) {
+                // 1. Seed Book
+                BookEntity b = new BookEntity(
+                        faker.book().title(),
+                        faker.number().randomDouble(2, 10, 50),
+                        faker.number().numberBetween(1, 20),
+                        faker.book().author()
+                );
+                em.persist(b);
+
+
+                // 2. Seed Magazine
+                MagazineEntity m = new MagazineEntity(
+                        faker.book().title() + " Monthly",
+                        faker.number().randomDouble(2, 5, 15),
+                        faker.number().numberBetween(5, 50),
+                        faker.number().numberBetween(100, 500),
+                        faker.date().past(30, TimeUnit.DAYS)
+                );
+                em.persist(m);
+
+
+                // 3. Seed DiscMag
+                DiscMagEntity dm = new DiscMagEntity(
+                        "Tech Disc: " + faker.app().name(),
+                        faker.number().randomDouble(2, 10, 25),
+                        faker.number().numberBetween(5, 30),
+                        faker.number().numberBetween(50, 200),
+                        faker.date().past(60, TimeUnit.DAYS),
+                        faker.bool().bool()
+                );
+                em.persist(dm);
+
+
+                // 4. Seed Ticket
+                TicketEntity t = new TicketEntity();
+                t.setDescription("Concert: " + faker.rockBand().name());
+                t.setPrice(faker.number().randomDouble(2, 50, 150));
+                em.persist(t);
+
+
+                // 5. Seed Tire (Automotive Department)
+                TireEntity tire = new TireEntity(
+                        faker.company().name() + " Tires",        // manufacturer
+                        faker.number().randomDouble(2, 80, 350),  // price
+                        faker.number().numberBetween(15, 22)      // diameter
+                );
+                em.persist(tire);
+
+
+                // 6. Seed Battery (Automotive Department - New In-Class Exercise)
+                BatteryEntity battery = new BatteryEntity(
+                        faker.company().name() + " Batteries",    // manufacturer
+                        faker.number().randomDouble(2, 100, 250), // price
+                        faker.number().numberBetween(500, 950)    // Cold Cranking Amps (CCA)
+                );
+                em.persist(battery);
+            }
+            em.getTransaction().commit();
+            System.out.println("Seeding complete. All products, including automotive niches, persisted to MySQL disk volume.");
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            System.out.println("Failure during database seeding: " + e.getMessage());
+        }
+    } 
+	
+
+
+
+________________
+
+
+7.4 In-Class Exercise: Adding Battery to the Persistence Layer
+
+
+Scenario: We have successfully integrated Tire entities into our single-table inheritance schema. Now, you must bring the Battery category into our persistent database architecture. You will create the BatteryEntity, write the bidirectional mapping methods inside the Battery DTO, and wire the operations into the main App controller.
+Step 1: Create BatteryEntity.java
+Create a new class src/main/java/bookstore/entities/BatteryEntity.java. It must inherit from the abstract VehiclePartEntity category, satisfying our single-table inheritance hierarchy.
+
+
+
+This code already exists, just confirm its there
+
+
+package bookstore.entities;
+
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+
+
+@Entity
+public class BatteryEntity extends VehiclePartEntity {
+    @Column(name = "cold_cranking_amps", nullable = true)
+    private int coldCrankingAmps;
+
+
+    public BatteryEntity() {
+        super();
+    }
+
+
+    public BatteryEntity(String manufacturer, double price, int coldCrankingAmps) {
+        super(manufacturer, price);
+        this.coldCrankingAmps = coldCrankingAmps;
+    }
+
+
+    public int getColdCrankingAmps() {
+        return coldCrankingAmps;
+    }
+
+
+    public void setColdCrankingAmps(int coldCrankingAmps) {
+        this.coldCrankingAmps = coldCrankingAmps;
+    }
+
+
+    @Override
+    public String toString() {
+        return "BatteryEntity{" +
+                "coldCrankingAmps=" + coldCrankingAmps +
+                "} " + super.toString();
+    }
+} 
+	
+
+Step 2: Add Mapping Methods to Battery.java DTO
+Open src/main/java/bookstore/pojos/Battery.java and implement the mapping logic to bridge the DTO with your new database entity:
+
+
+Add this code
+
+
+// Add to src/main/java/bookstore/pojos/Battery.java
+
+
+public bookstore.entities.BatteryEntity toEntity() {
+    bookstore.entities.BatteryEntity entity = new bookstore.entities.BatteryEntity();
+    entity.setId(this.getDbId()); // Inherited from Product DTO
+    entity.setProductId(this.getProductId()); // Inherited from Product DTO
+    entity.setManufacturer(this.getManufacturer()); // Inherited from VehiclePart DTO
+    entity.setPrice(this.getPrice()); // Inherited from VehiclePart DTO
+    entity.setColdCrankingAmps(this.getColdCrankingAmps());
+    return entity;
+}
+
+
+public static Battery fromEntity(bookstore.entities.BatteryEntity entity) {
+    Battery battery = new Battery(
+            entity.getManufacturer(),
+            entity.getPrice(),
+            entity.getColdCrankingAmps()
+    );
+    battery.setDbId(entity.getId());
+    battery.setProductId(entity.getProductId());
+    return battery;
+} 
+	
+
+
+
+Step 3: Integrate Battery Mapping in App.java
+You must now update App.java in five key locations so that the controller can marshal, unmarshal, edit, and sell Battery items cleanly.
+
+
+               1. Add Menu Support: Update addItem() choice 5:
+
+
+case 5: item = new Battery(); break; 
+	
+
+
+
+               2. Add Save Support: Update saveToDb() helper:
+
+
+
+
+} else if (item instanceof Battery) {
+    entity = ((Battery) item).toEntity();
+} 
+	
+
+
+
+               3. Add Printing Support: Update printEntityAsDto() helper:
+
+
+} else if (entity instanceof BatteryEntity) {
+    System.out.println(Battery.fromEntity((BatteryEntity) entity));
+} else if (entity instanceof TireEntity) {
+    System.out.println(Tire.fromEntity((TireEntity) entity));
+} 
+	
+
+
+
+               4. Add Editing Support: Update editItem() helper:
+
+
+
+
+} else if (entity instanceof BatteryEntity) {
+    Battery dto = Battery.fromEntity((BatteryEntity) entity);
+    dto.edit(this.input);
+    em.merge(dto.toEntity());
+} 
+	
+
+               5. Add Sales Support: Update sellItem() helper:
+
+
+
+
+} else if (entity instanceof BatteryEntity) {
+    Battery dto = Battery.fromEntity((BatteryEntity) entity);
+    cashTill.sellItem(dto);
+    em.merge(dto.toEntity());
+} 
+	
+
+
+
+               6. Add Testing Support: Update findItem() helper:
+
+
+
+
+} else if (entity instanceof BatteryEntity) {
+    pojo = Battery.fromEntity((BatteryEntity) entity);
+} 
+	
+
+________________
+
+
+7.5 Verification & Verification Testing
+               1. Verify Database Schema Generation:
+               * Run Main.java. Because persistence.xml is configured to use hibernate.hbm2ddl.auto=create, watch the console SQL log [5]. You should see Hibernate generate the column cold_cranking_amps on the single table product_entity automatically.
+               2. Run Tests: Execute mvn test. The BatteryTest.java suite should run, verifying that your mapping layers perform input collection, validation, and serialization without exceptions.
+
+
+________________
+
+
+8. Summary & Lab 4 Preview
+               1. JPA is the specification; Hibernate is the ORM provider [5].
+               2. persistence.xml configures the connection and controls schema auto-creation (create, update) [5].
+               3. Dirty Checking allows Hibernate to track changed Java objects and update database records automatically upon transaction commits.
+               4. Lab 4 Preview: You will perform these exact mapping and CRUD steps for your unique Niche Product (e.g., Guitar, PowerTool). You will map your custom POJOs to a corresponding database entity and write tests to confirm the integration.

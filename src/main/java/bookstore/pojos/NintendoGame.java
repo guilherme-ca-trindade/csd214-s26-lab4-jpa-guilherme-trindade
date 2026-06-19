@@ -1,5 +1,7 @@
 package bookstore.pojos;
 
+import bookstore.entities.NintendoGameEntity;
+
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -67,6 +69,32 @@ public class NintendoGame extends NintendoProduct {
 
     public void setGenre(String genre) {
         this.genre = genre;
+    }
+
+    // --- DTO <-> Entity mapping ---
+    public NintendoGameEntity toEntity() {
+        NintendoGameEntity entity = new NintendoGameEntity();
+        entity.setId(this.getDbId());             // Inherited from Product DTO
+        entity.setProductId(this.getProductId()); // Inherited from Product DTO
+        entity.setPlatform(this.getPlatform());   // Inherited from NintendoProduct DTO
+        entity.setTitle(this.title);
+        entity.setPrice(this.price);
+        entity.setCopies(this.copies);
+        entity.setGenre(this.genre);
+        return entity;
+    }
+
+    public static NintendoGame fromEntity(NintendoGameEntity entity) {
+        NintendoGame game = new NintendoGame(
+                entity.getTitle(),
+                entity.getPrice(),
+                entity.getCopies(),
+                entity.getPlatform(),
+                entity.getGenre()
+        );
+        game.setDbId(entity.getId());
+        game.setProductId(entity.getProductId());
+        return game;
     }
 
     @Override

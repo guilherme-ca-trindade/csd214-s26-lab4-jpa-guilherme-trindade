@@ -1,5 +1,7 @@
 package bookstore.pojos;
 
+import bookstore.entities.MagazineEntity;
+
 import java.util.Date;
 import java.util.Scanner;
 
@@ -50,6 +52,32 @@ public class Magazine extends Publication {
     public void setOrderQty(int o) { this.orderQty = o; }
     public Date getCurrentIssue() { return currentIssue; }
     public void setCurrentIssue(Date d) { this.currentIssue = d; }
+
+    // --- DTO <-> Entity mapping ---
+    public MagazineEntity toEntity() {
+        MagazineEntity entity = new MagazineEntity();
+        entity.setId(this.getDbId());
+        entity.setProductId(this.getProductId());
+        entity.setTitle(this.getTitle());
+        entity.setPrice(this.getPrice());
+        entity.setCopies(this.getCopies());
+        entity.setOrderQty(this.orderQty);
+        entity.setCurrentIssue(this.currentIssue);
+        return entity;
+    }
+
+    public static Magazine fromEntity(MagazineEntity entity) {
+        Magazine magazine = new Magazine(
+                entity.getOrderQty(),
+                entity.getCurrentIssue(),
+                entity.getTitle(),
+                entity.getPrice(),
+                entity.getCopies()
+        );
+        magazine.setDbId(entity.getId());
+        magazine.setProductId(entity.getProductId());
+        return magazine;
+    }
 
     @Override
     public String toString() {

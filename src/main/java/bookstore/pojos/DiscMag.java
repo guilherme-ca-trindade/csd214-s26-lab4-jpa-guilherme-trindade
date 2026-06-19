@@ -1,5 +1,7 @@
 package bookstore.pojos;
 
+import bookstore.entities.DiscMagEntity;
+
 import java.util.Date;
 import java.util.Scanner;
 
@@ -38,6 +40,34 @@ public class DiscMag extends Magazine {
 
     public boolean isHasDisc() { return hasDisc; }
     public void setHasDisc(boolean h) { this.hasDisc = h; }
+
+    // --- DTO <-> Entity mapping ---
+    public DiscMagEntity toEntity() {
+        DiscMagEntity entity = new DiscMagEntity();
+        entity.setId(this.getDbId());
+        entity.setProductId(this.getProductId());
+        entity.setTitle(this.getTitle());
+        entity.setPrice(this.getPrice());
+        entity.setCopies(this.getCopies());
+        entity.setOrderQty(this.getOrderQty());
+        entity.setCurrentIssue(this.getCurrentIssue());
+        entity.setHasDisc(this.hasDisc);
+        return entity;
+    }
+
+    public static DiscMag fromEntity(DiscMagEntity entity) {
+        DiscMag discMag = new DiscMag(
+                entity.getHasDisc(),
+                entity.getOrderQty(),
+                entity.getCurrentIssue(),
+                entity.getTitle(),
+                entity.getPrice(),
+                entity.getCopies()
+        );
+        discMag.setDbId(entity.getId());
+        discMag.setProductId(entity.getProductId());
+        return discMag;
+    }
 
     @Override
     public String toString() {

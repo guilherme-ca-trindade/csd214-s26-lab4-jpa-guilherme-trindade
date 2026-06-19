@@ -7,6 +7,9 @@ import java.util.UUID;
 // (Price is defined in children: Ticket and Publication)
 public abstract class Product extends Editable implements SaleableItem, Serializable {
     private String productId;
+    // Mirrors the database primary key (ProductEntity.id). Kept on the DTO so that
+    // toEntity()/em.merge() update the existing row instead of inserting a duplicate.
+    private Long dbId;
 
     public Product() {
         // generate a default productID
@@ -19,6 +22,14 @@ public abstract class Product extends Editable implements SaleableItem, Serializ
 
     public void setProductId(String productId) {
         this.productId = productId;
+    }
+
+    public Long getDbId() {
+        return dbId;
+    }
+
+    public void setDbId(Long dbId) {
+        this.dbId = dbId;
     }
 
     @Override
