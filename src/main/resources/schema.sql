@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS tires (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id VARCHAR(255) UNIQUE NOT NULL,
+    manufacturer VARCHAR(255) NOT NULL,
+    price DOUBLE NOT NULL,
+    diameter DOUBLE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS nintendo_games (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id VARCHAR(255) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    price DOUBLE NOT NULL,
+    copies INT NOT NULL,
+    platform VARCHAR(255) NOT NULL,
+    genre VARCHAR(255) NOT NULL
+);

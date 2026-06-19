@@ -1,0 +1,197 @@
+classDiagram
+    class SaleableItem {
+        <<interface>>
+        +sellItem() void
+        +getPrice() double
+    }
+
+    class Serializable {
+        <<interface>>
+    }
+
+    class Editable {
+        <<abstract>>
+        +edit(Scanner) void*
+        +initialize(Scanner) void*
+        +getInput(Scanner, String) String
+        +getInput(Scanner, int) int
+        +getInput(Scanner, double) double
+        +getInput(Scanner, boolean) boolean
+        +getInput(Scanner, Date) Date
+    }
+
+    class Product {
+        <<abstract>>
+        -productId: String
+        +Product()
+        +getProductId() String
+        +setProductId(String) void
+        +toString() String*
+    }
+
+    class Publication {
+        <<abstract>>
+        -title: String
+        -price: double
+        -copies: int
+        +Publication()
+        +Publication(String, double, int)
+        +getTitle() String
+        +setTitle(String) void
+        +getPrice() double
+        +setPrice(double) void
+        +getCopies() int
+        +setCopies(int) void
+        +initialize(Scanner) void
+        +edit(Scanner) void
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+    class Book {
+        -author: String
+        +Book()
+        +Book(String, String, double, int)
+        +getAuthor() String
+        +setAuthor(String) void
+        +sellItem() void
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+    class Magazine {
+        -orderQuantity: int
+        -issueDate: Date
+        +Magazine()
+        +Magazine(int, Date, String, double, int)
+        +getOrderQuantity() int
+        +setOrderQuantity(int) void
+        +getIssueDate() Date
+        +setIssueDate(Date) void
+        +initialize(Scanner) void
+        +edit(Scanner) void
+        +sellItem() void
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+    class DiscMag {
+        -hasDisc: boolean
+        +DiscMag()
+        +DiscMag(boolean, int, Date, String, double, int)
+        +isHasDisc() boolean
+        +setHasDisc(boolean) void
+        +initialize(Scanner) void
+        +edit(Scanner) void
+        +sellItem() void
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+   class Ticket {
+        description: String
+        price: double
+        +Ticket()
+        +getDescription() String
+        +setDescription(String) void
+        +getPrice() double
+        +setPrice(double) void
+        +initialize(Scanner) void
+        +edit(Scanner) void
+        +sellItem() void
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+   class NintendoProduct {
+        <<abstract>>
+        -platform: String
+        +NintendoProduct()
+        +NintendoProduct(String)
+        +getPlatform() String
+        +setPlatform(String) void
+        +initialize(Scanner) void*
+        +edit(Scanner) void*
+        +sellItem() void*
+        +getPrice() double*
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+    class NintendoGame {
+        -title: String
+        -price: double
+        -copies: int
+        -genre: String
+        +NintendoGame()
+        +NintendoGame(String, double, int, String, String)
+        +getTitle() String
+        +setTitle(String) void
+        +getPrice() double
+        +setPrice(double) void
+        +getCopies() int
+        +setCopies(int) void
+        +getGenre() String
+        +setGenre(String) void
+        +initialize(Scanner) void
+        +edit(Scanner) void
+        +sellItem() void
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+    class NintendoHardware {
+        -name: String
+        -price: double
+        -copies: int
+        -hardwareType: String
+        -color: String
+        +NintendoHardware()
+        +NintendoHardware(String, double, int, String, String, String)
+        +getName() String
+        +setName(String) void
+        +getPrice() double
+        +setPrice(double) void
+        +getCopies() int
+        +setCopies(int) void
+        +getHardwareType() String
+        +setHardwareType(String) void
+        +getColor() String
+        +setColor(String) void
+        +initialize(Scanner) void
+        +edit(Scanner) void
+        +sellItem() void
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+
+    SaleableItem <|.. Editable : implements
+
+    Serializable <|.. Editable : implements
+    Serializable <|.. Product : implements
+
+    Editable <|-- Product : extends
+    SaleableItem <|.. Product : implements
+
+    Product <|-- Publication : extends
+
+    Publication <|-- Book : extends
+
+    Publication <|-- Magazine : extends
+
+    Magazine <|-- DiscMag : extends
+
+    Product <|-- Ticket : extends
+
+    Product <|-- NintendoProduct : extends
+    NintendoProduct <|-- NintendoGame : extends
+    NintendoProduct <|-- NintendoHardware : extends

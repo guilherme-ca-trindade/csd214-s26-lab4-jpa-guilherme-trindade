@@ -1,0 +1,105 @@
+classDiagram
+    class SaleableItem {
+        <<interface>>
+        +sellItem() void
+        +getPrice() double
+    }
+
+    class Editable {
+        <<abstract>>
+        +edit(Scanner) void
+        +initialize(Scanner) void
+        +getInput(Scanner, String) String
+        +getInput(Scanner, int) int
+        +getInput(Scanner, double) double
+        +getInput(Scanner, boolean) boolean
+        +getInput(Scanner, Date) Date
+    }
+
+    %% Base Class
+    class Product {
+        <<abstract>>
+        -productId: String
+        +Product()
+        +getProductId() String
+        +setProductId(String) void
+        +toString() String
+    }
+
+    %% Abstract Parent
+    class NintendoProduct {
+        <<abstract>>
+        -platform: String
+        +NintendoProduct()
+        +NintendoProduct(String platform)
+        +getPlatform() String
+        +setPlatform(String) void
+        +initialize(Scanner) void*
+        +edit(Scanner) void*
+        +sellItem() void*
+        +getPrice() double*
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+    %% Concrete Children
+    class NintendoGame {
+        -title: String
+        -price: double
+        -copies: int
+        -genre: String
+        +NintendoGame()
+        +NintendoGame(String, double, int, String, String)
+        +getTitle() String
+        +setTitle(String) void
+        +getPrice() double
+        +setPrice(double) void
+        +getCopies() int
+        +setCopies(int) void
+        +getGenre() String
+        +setGenre(String) void
+        +initialize(Scanner) void
+        +edit(Scanner) void
+        +sellItem() void
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+    class NintendoHardware {
+        -name: String
+        -price: double
+        -copies: int
+        -hardwareType: String
+        -color: String
+        +NintendoHardware()
+        +NintendoHardware(String, double, int, String, String, String)
+        +getName() String
+        +setName(String) void
+        +getPrice() double
+        +setPrice(double) void
+        +getCopies() int
+        +setCopies(int) void
+        +getHardwareType() String
+        +setHardwareType(String) void
+        +getColor() String
+        +setColor(String) void
+        +initialize(Scanner) void
+        +edit(Scanner) void
+        +sellItem() void
+        +toString() String
+        +equals(Object) boolean
+        +hashCode() int
+    }
+
+    %% Relationships
+
+    SaleableItem <|.. Product : implements
+    Editable <|.. Product : implements
+
+    Product <|-- NintendoProduct : extends
+
+    NintendoProduct <|-- NintendoGame : extends
+    NintendoProduct <|-- NintendoHardware : extends
+
