@@ -9,6 +9,7 @@ import jakarta.persistence.Persistence;
 
 import java.util.List;
 import java.util.Scanner;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class App {
@@ -412,6 +413,7 @@ public class App {
                         "Switch",                                // platform
                         faker.book().genre()                     // genre
                 );
+                game.setProductId(UUID.randomUUID().toString()); // business key
                 em.persist(game);
 
                 // Nintendo Hardware (Niche Department)
@@ -423,6 +425,7 @@ public class App {
                         "Controller",                            // hardwareType
                         faker.color().name()                     // color
                 );
+                hardware.setProductId(UUID.randomUUID().toString()); // business key
                 em.persist(hardware);
             }
             em.getTransaction().commit();

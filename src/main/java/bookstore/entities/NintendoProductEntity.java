@@ -15,7 +15,7 @@ import java.util.Objects;
  * declare the columns unique to them.
  */
 @Entity
-public class NintendoProductEntity extends ProductEntity {
+public abstract class NintendoProductEntity extends ProductEntity {
     @Column(name = "platform")
     private String platform;
 
@@ -58,18 +58,20 @@ public class NintendoProductEntity extends ProductEntity {
         this.copies = copies;
     }
 
+    // Logical identity is based on the business key (productId UUID) inherited from
+    // ProductEntity, never the surrogate DB id or mutable fields. This keeps entity
+    // identity stable across the JPA lifecycle. Inherited by the concrete children.
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        NintendoProductEntity that = (NintendoProductEntity) o;
-        return Double.compare(price, that.price) == 0 &&
-                copies == that.copies &&
-                Objects.equals(platform, that.platform);
+        if (this == o) return true;
+        if (!(o instanceof NintendoProductEntity that)) return false;
+        // Two unsaved entities (null business key) are never considered equal.
+        return getProductId() != null && getProductId().equals(that.getProductId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(platform, price, copies);
+        return getProductId() != null ? getProductId().hashCode() : System.identityHashCode(this);
     }
 
     @Override

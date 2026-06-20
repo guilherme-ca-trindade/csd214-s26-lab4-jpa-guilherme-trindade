@@ -3,8 +3,6 @@ package bookstore.entities;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 
-import java.util.Objects;
-
 /**
  * Concrete entity representing a Nintendo game title.
  * Extends {@link NintendoProductEntity} and adds the {@code genre} and
@@ -43,18 +41,8 @@ public class NintendoGameEntity extends NintendoProductEntity {
         this.genre = genre;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        NintendoGameEntity that = (NintendoGameEntity) o;
-        return Objects.equals(title, that.title) && Objects.equals(genre, that.genre);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), title, genre);
-    }
+    // equals()/hashCode() are inherited from NintendoProductEntity and use the
+    // productId business key, per the lab's identity-stability requirement.
 
     @Override
     public String toString() {

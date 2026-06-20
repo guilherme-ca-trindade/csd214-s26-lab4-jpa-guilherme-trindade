@@ -3,8 +3,6 @@ package bookstore.entities;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 
-import java.util.Objects;
-
 /**
  * Concrete entity representing Nintendo gaming hardware (consoles, Joy-Cons, etc.).
  * Extends {@link NintendoProductEntity} and adds the {@code name},
@@ -55,20 +53,8 @@ public class NintendoHardwareEntity extends NintendoProductEntity {
         this.color = color;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        NintendoHardwareEntity that = (NintendoHardwareEntity) o;
-        return Objects.equals(name, that.name) &&
-                Objects.equals(hardwareType, that.hardwareType) &&
-                Objects.equals(color, that.color);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), name, hardwareType, color);
-    }
+    // equals()/hashCode() are inherited from NintendoProductEntity and use the
+    // productId business key, per the lab's identity-stability requirement.
 
     @Override
     public String toString() {
